@@ -1,7 +1,7 @@
 ﻿clear-host
 Write-Host " + - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - +"
 Write-Host " "    
-Write-Host "                               TOTVS CLOUD - HARDENING NEXT GENERATION                            "    
+Write-Host "                               COMPANY - HARDENING NEXT GENERATION                            "    
 Write-Host " "    
 Write-Host " + - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - +"
 #Write-Host "::::::" -ForegroundColor DarkYellow
