@@ -23,7 +23,7 @@ do {
 switch ($opcao) {
     01 { 
         $apply = "hardening"
-        $configfile = Read-Host "C:\totvs\hardening-Config-OS-generic-w2k16-v0.4.json"
+        $configfile = Read-Host "C:\company\hardening-Config-OS-generic-w2k16-v0.4.json"
         ./hardening-Invoker-OS.ps1 -apply $apply -configfile $configfile
     }
     02 {
