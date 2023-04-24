@@ -1,17 +1,3 @@
-﻿<# 
-NOME:
-    Aplica-Hardening
-DESCRIÇÃO:
-    Este script instala o Hardening V1 no Datasul
-EXEMPLO:hardening-Invoker-OS
-    PS C:\totvs\hardening .\Aplica-Hardening.ps1
-AUTORES:
-    Name: Antonio Camelo
-	E-mail: antonio.camelo@totvs.com.br
-    
-    Nome: Leandro Costa
-    E-mail: leandro.costa@totvs.com
-#>
 
 Clear-Host
 # Verifica se o diretório existe, caso não exista, cria o diretório
@@ -41,8 +27,3 @@ if ($hash.Hash -eq "AEC1D24EDAB7D2D2CFA0253AFC1FF5FC09D3643A1C913E3A8B957E91E8B6
     Exit 1
 }
 
-    #Cria Schedule task
-    #Gerar arquivo de log da execução do script com timestamp das ações
-    #Restart
-    #Verificar o caminho do diretório padrão c:\totvs\.
-    #>
