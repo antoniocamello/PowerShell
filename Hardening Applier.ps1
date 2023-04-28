@@ -42,15 +42,15 @@ function invoke-hardening {
 
     $urls = @{
         "generico" = @(
-            @{ "url" = "$repo_totvs_edge_url/Hardening-OS/generic/stable/hardening-Invoker-OS-Generic.ps1" },
-            @{ "url" = "$repo_totvs_edge_url/Hardening-OS/generic/stable/hardening-Config-OS-Generic-w2k16.json" },
-            @{ "url" = "$repo_totvs_edge_url/Hardening-OS/generic/stable/hardening-Complementary-Generic-AuditPol.ps1" },
-            @{ "url" = "$repo_totvs_edge_url/Hardening-OS/generic/stable/hardening-Complementary-Generic-UnwantedSVCs.ps1" }
+            @{ "file1" = "$repo_totvs_edge_url/Hardening-OS/generic/stable/hardening-Invoker-OS-Generic.ps1" },
+            @{ "file2" = "$repo_totvs_edge_url/Hardening-OS/generic/stable/hardening-Config-OS-Generic-w2k16.json" },
+            @{ "file2" = "$repo_totvs_edge_url/Hardening-OS/generic/stable/hardening-Complementary-Generic-AuditPol.ps1" },
+            @{ "file2" = "$repo_totvs_edge_url/Hardening-OS/generic/stable/hardening-Complementary-Generic-UnwantedSVCs.ps1" }
         ),
         "datasul" = @(
-            @{ "url" = "$repo_totvs_edge_url/Hardening-OS/generic/stable/hardening-Config-OS-Datasul-w2k16.json" },
-            @{ "url" = "" },
-            @{ "url" = "" }
+            @{ "file1" = "$repo_totvs_edge_url/Hardening-OS/generic/stable/hardening-Config-OS-Datasul-w2k16.json" },
+            @{ "file2" = "" },
+            @{ "file3" = "" }
         )
     }
 
