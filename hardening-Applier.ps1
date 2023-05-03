@@ -17,7 +17,7 @@ param (
     [string]$product = "generic",
     [Parameter(Mandatory = $true)]
     [string]$version = "stable"
-)
+    )
 
 #Função que verifica a execução como Admin
 function Admin-check {
