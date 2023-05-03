@@ -136,7 +136,7 @@ Admin-check
 
 download_hardening_files -Product "generic" -version "stable"
 
-.\hardeningoApplier-OS.ps1 -Product "generic" -Version "Stable"
+.\hardening-Applier-OS.ps1 -Product "generic" -Version "stable" 2>&1 | Tee-Object -FilePath log.txt
 
 
 
