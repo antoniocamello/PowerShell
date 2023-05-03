@@ -14,9 +14,9 @@ Clear-Host
 
 param (
     [Parameter(Mandatory = $true)]
-    [string]$product = "generic",
+    $product = "generic",
     [Parameter(Mandatory = $true)]
-    [string]$version = "stable"
+    $version = "stable"
     )
 
 #Função que verifica a execução como Admin
