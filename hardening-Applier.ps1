@@ -12,8 +12,6 @@ EXEMPLO:hardening-Invoker-OS
 
 Clear-Host
 
-[CmdletBinding()]
-
 param (
     [Parameter(Mandatory = $true)]
     [string]$product = "generic",
@@ -164,7 +162,7 @@ function arquivos-hardening($product, $version) {
             )
         }    
     }                                     
-
+}
 
     # Verifica se o diretório local existe, caso não exista, cria a estrutura
     if (!(Test-Path $localDirectory)) {
