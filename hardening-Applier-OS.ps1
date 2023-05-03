@@ -114,38 +114,9 @@ function Apply-Hardening() {
     }
 
     # Chama o script hardening-Invoker-OS.ps1 com os parâmetros adequados
-    & ".\hardening-Invoker-OS.ps1" -apply hardening -configfile $configFile
+    .\hardening\hardening-Invoker-OS.ps1 -apply hardening -configfile $configFile
 
-    # Verifica se a versão é especificada e, se sim, adiciona a tag correspondente ao arquivo de log
-    $logTag = ""
-    if ($Version) {
-        $logTag = "-$Version"
-    }
-
-    # Salva o log da execução em um arquivo
-    $logFileName = "hardening-log$logTag.txt"
-    Get-Content "C:\Windows\System32\winevt\Logs\Security.evtx" -ErrorAction SilentlyContinue |
-        Export-Csv -Path $logFileName -NoTypeInformation -Append
-}
+}    
 
 
 #-------------------------------------------START SCRIPT----------------------------------------------------------
-#Incia a chamada das funções
-
-Admin-check
-
-download_hardening_files -Product "generic" -version "stable"
-
-.\hardening-Applier-OS.ps1 -Product "generic" -Version "stable" 2>&1 | Tee-Object -FilePath log.txt
-
-
-
-
-
-
-
-
-
-
-
-
