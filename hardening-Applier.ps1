@@ -20,6 +20,24 @@ param (
     [string] $version = $null 
   )
 
+  if (-not (Test-Path $configDir)) {
+    Write-Error "O diretório $configDir não existe."
+    return
+}
+
+$validProducts = @("generic", "datasul", "legaldesk", "sisjuri", "protheus", "rm", "smartrm", "Winthor", "Consinco")
+if (-not ($validProducts -contains $product)) {
+    Write-Error "O produto '$product' não é válido. Os produtos válidos são: $($validProducts -join ", ")."
+    return
+}
+
+$validVersions = @("stable", "latest")
+if (-not ($validVersions -contains $version)) {
+    Write-Error "A versão '$version' não é válida. As versões válidas são: $($validVersions -join ", ")."
+    return
+}
+
+
 #Função que verifica a execução como Admin
 function Admin-check {
     $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
