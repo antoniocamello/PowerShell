@@ -104,7 +104,7 @@ function Apply-Hardening() {
         [string]$Product,
         [string]$Version
     )
-
+    $invokerPath = "c:\totvs\hardening\hardening-Invoker-OS.ps1"
     $configFile = "c:\totvs\hardening\hardening-Config-OS-Generic-w2k16.json"
     $productFile = "c:\totvs\hardening\hardening-Config-OS-$Product-w2k16.json"
 
