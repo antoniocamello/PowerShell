@@ -13,11 +13,12 @@ EXEMPLO:hardening-Invoker-OS
 Clear-Host
 
 param (
-    [Parameter(Mandatory = $true)]
-    $product = "generic",
-    [Parameter(Mandatory = $true)]
-    $version = "stable"
-    )
+	
+    [parameter(mandatory = $true, HelpMessage="generic para aplicar o hardening de SegInfo." )]
+    [string] $product = $null,
+    [parameter(mandatory = $true, HelpMessage="stable para pegar a versão estável do aquivo de configuração do hardening.")]
+    [string] $version = $null 
+  )
 
 #Função que verifica a execução como Admin
 function Admin-check {
