@@ -33,13 +33,12 @@ if (!(Test-Path $localDirectory)) {
 function download_hardening_files()
  {
 
-     Param
-    (
-         [Parameter(Mandatory=$true, Position=0)]
-         [string] $product,
-         [Parameter(Mandatory=$true, Position=1)]
-         [string] $version
-    )
+     Param(
+    [Parameter(Mandatory=$true, Position=0)]
+    [string] $Product,
+    [Parameter(Mandatory=$true, Position=1)]
+    [string] $Version
+)
 
 
     # Define a URL do repositório
@@ -50,7 +49,7 @@ function download_hardening_files()
         {
           "generic": [
             {
-              "url": "generic/_var_version/hardening-Invoker-OS-Generic.ps1"
+              "url": "generic/_var_version/hardening-Invoker-OS.ps1"
             },
             {
               "url": "generic/_var_version/hardening-Config-OS-generic-w2k16.json"
@@ -64,7 +63,7 @@ function download_hardening_files()
           ],
           "datasul": [
             {
-              "url": "generic/_var_version/hardening-Invoker-OS-Generic.ps1"
+              "url": "generic/_var_version/hardening-Invoker-OS.ps1"
             },
             {
               "url": "datasul/_var_version/hardening-Config-OS-datasul.json"
@@ -94,27 +93,10 @@ function download_hardening_files()
         $uri = [regex]::Replace($repoURI+$file.url,"_var_version",$version)
         $fileName = $uri.Split("/")[-1]
         $filePath = Join-Path -Path $destPath -ChildPath $fileName
-
-        write-host $uri
-                
-        Invoke-WebRequest $url -OutFile $filePath
+                       
+        Invoke-WebRequest $uri -OutFile $filePath
     }
 }
-##Cria o agendamento do enforcement no task scheduler
-function enforcement-Hardening {
-    # Define o nome da tarefa agendada
-    $taskName = "Enforcement-Hardening" 
-
-    # Caminho do arquivo .ps1 e os parâmetros necessários
-    $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Bypass -File `"C:\totvs\hardening\hardening-Invoker-OS.ps1`" -apply hardening -configfile `"c:\totvs\hardening\cis_hardening_windows_server_2016_default.json`" -productfile `"c:\totvs\hardening\diff.json`"" 
-
-    # Define o gatilho para a tarefa agendada
-    $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).Date.AddDays(1) -RepetitionInterval (New-TimeSpan -Hours 1) -RepetitionDuration (New-TimeSpan -Days 1)
-
-    # Cria a tarefa agendada
-    Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -User "NT AUTHORITY\SYSTEM"
-}
-
 
 
 
@@ -125,6 +107,13 @@ Admin-check
 
 download_hardening_files -Product "generic" -version "stable"
 
-enforcement-Hardening
+
+
+
+
+
+
+
+
 
 
