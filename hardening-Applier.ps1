@@ -99,6 +99,35 @@ function download_hardening_files()
 }
 
 
+function Apply-Hardening() {
+    param(
+        [string]$Product,
+        [string]$Version
+    )
+
+    $configFile = "c:\totvs\hardening\hardening-Config-OS-Generic-w2k16.json"
+    $productFile = "c:\totvs\hardening\hardening-Config-OS-$Product-w2k16.json"
+
+    # Verifica se o arquivo de configuração específico do produto existe
+    if (Test-Path $productFile) {
+        $configFile = $productFile
+    }
+
+    # Chama o script hardening-Invoker-OS.ps1 com os parâmetros adequados
+    & ".\hardening-Invoker-OS.ps1" -apply hardening -configfile $configFile
+
+    # Verifica se a versão é especificada e, se sim, adiciona a tag correspondente ao arquivo de log
+    $logTag = ""
+    if ($Version) {
+        $logTag = "-$Version"
+    }
+
+    # Salva o log da execução em um arquivo
+    $logFileName = "hardening-log$logTag.txt"
+    Get-Content "C:\Windows\System32\winevt\Logs\Security.evtx" -ErrorAction SilentlyContinue |
+        Export-Csv -Path $logFileName -NoTypeInformation -Append
+}
+
 
 #-------------------------------------------START SCRIPT----------------------------------------------------------
 #Incia a chamada das funções
@@ -106,6 +135,9 @@ function download_hardening_files()
 Admin-check
 
 download_hardening_files -Product "generic" -version "stable"
+
+.\hardeningoApplier-OS.ps1 -Product "generic" -Version "Stable"
+
 
 
 
