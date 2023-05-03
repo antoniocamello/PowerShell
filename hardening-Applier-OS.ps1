@@ -69,10 +69,10 @@ function download_hardening_files()
               "url": "datasul/_var_version/hardening-Config-OS-datasul.json"
             },
             {
-              "url": "generic/_var_version/hardening-Complementary-generic-AuditPol.ps1"
+              "url": "generic/_var_version/hardening-Complementary-datasul-AuditPol.ps1"
             },
             {
-              "url": "generic/_var_version/hardening-Complementary-generic-UnwantedSVCs.ps1"
+              "url": "generic/_var_version/hardening-Complementary-datasul-UnwantedSVCs.ps1"
             }
           ]
         }
@@ -99,24 +99,56 @@ function download_hardening_files()
 }
 
 
-function Apply-Hardening() {
-    param(
-        [string]$Product,
-        [string]$Version
-    )
-    $invokerPath = "c:\totvs\hardening\hardening-Invoker-OS.ps1"
-    $configFile = "c:\totvs\hardening\hardening-Config-OS-Generic-w2k16.json"
-    $productFile = "c:\totvs\hardening\hardening-Config-OS-$Product-w2k16.json"
-
-    # Verifica se o arquivo de configuração específico do produto existe
-    if (Test-Path $productFile) {
-        $configFile = $productFile
-    }
-
-    # Chama o script hardening-Invoker-OS.ps1 com os parâmetros adequados
-    .\hardening\hardening-Invoker-OS.ps1 -apply hardening -configfile $configFile
-
-}    
-
 
 #-------------------------------------------START SCRIPT----------------------------------------------------------
+
+#Cria a pasta para salvar os arquivos de log
+# RESULT_SECEDIT  tem o log do que foi aplicado via secedit
+# RESULT_REGISTRY tem o log do que foi aplicato via registro
+$checkfolder = Test-Path "C:\totvs\hardening\log\"
+if ($checkfolder -eq $false ) {
+    try {
+       
+        New-Item -ItemType Directory -Force -Path "C:\totvs\hardening\log\" | Out-Null
+    }
+    catch {
+        Write-Warning "Não foi possível criar a pasta em C:\totvs\hardening\log\, utilizada para salvar logs. Abortando execução."
+        Exit
+    }
+}
+
+#Cria a pasta para salvar os arquivos de Backup [rollback]
+#HARDENINGBACKUP é o arquivo com as configurações atuais do servidor (antes da aplicação do hardening). 
+$checkfolder = Test-Path "C:\totvs\hardening\backup"
+if ($checkfolder -eq $false ) {
+    try {
+        
+        New-Item -ItemType Directory -Force -Path "C:\totvs\hardening\backup\" | Out-Null
+    }
+    catch {
+        Write-Warning "Não foi possível criar a pasta em C:\totvs\hardening\backup\, utilizada para salvar logs e o arquivo de rollback. Abortando execução."
+        Exit
+    }
+}
+
+
+
+#Incia a chamada das funções
+
+Admin-check
+
+download_hardening_files -Product "generic" -version "stable" 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
