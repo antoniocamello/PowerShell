@@ -12,17 +12,41 @@ EXEMPLO:hardening-Invoker-OS
 
 Clear-Host
 
-function Apply-Hardening {
-    param (
-        [string]$Product,
-        [string]$Version
-    )
+#Função que verifica a execução como Admin
+function Admin-check {
+    $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
+    if ($currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator) -eq $false) {
+        Write-Warning "Scritp sendo executado com usuário não-admin. Abortando execução."
+        Exit
+        
+    }
 
-    # Cria o diretório base para os arquivos de hardening
-    $BaseDirectory = Join-Path -Path $PSScriptRoot -ChildPath 'hardening'
+}
 
+# Define o diretório local onde os arquivos serão baixados
+$localDirectory = "C:\totvs\hardening"
+if (!(Test-Path $localDirectory)) {
+    New-Item -ItemType Directory -Path $localDirectory
+}
+
+
+#Função que Cria o dicionário de dados com os arquivos de configuração dos produtos
+function download_hardening_files()
+ {
+
+     Param(
+    [Parameter(Mandatory=$true, Position=0)]
+    [string] $Product,
+    [Parameter(Mandatory=$true, Position=1)]
+    [string] $Version
+)
+
+
+    # Define a URL do repositório
+    $repoURI = "http://192.168.1.125:8080/Hardening-OS/"
+    
     # Cria o dicionário de dados utilizando JSON com os arquivos de configuração dos produtos
-    $json = @"
+    $json = '
         {
           "generic": [
             {
@@ -52,49 +76,110 @@ function Apply-Hardening {
               "url": "datasul/_var_version/hardening-Complementary-Datasul-UnwantedSVCs.ps1"
             }
           ]
+
         }
-"@
+    '
+    $repository = $json | ConvertFrom-Json
+       
 
-    # Verifica se o produto existe no dicionário de dados
-    if ($json -match "`"$Product`":\s*\[(.*?)\]") {
-    # Extrai os arquivos de configuração do produto do dicionário
-        $productFiles = $matches[1] -replace '\s+', '' | ConvertFrom-Json
-
-        # Percorre a lista de arquivos do produto e baixa cada arquivo
-        foreach ($file in $productFiles) {
-            $url = $file.url -replace '_var_version', $Version
-            $path = Join-Path -Path $BaseDirectory -ChildPath $url
-
-            # Verifica se o arquivo já existe no diretório de hardening, se não existir, baixa o arquivo
-            if (!(Test-Path -Path $path)) {
-                Download-Hardening-Files -Url $url -Path $path
-            }
-        }
-    } else {
-        Write-Error "Product '$Product' not found in hardening data."
+    # Define o diretório de destino
+    $destPath = "c:\totvs\hardening\"
+    
+    # Cria o diretório de destino se ele não existir
+    if (!(Test-Path -Path $destPath -PathType Container)) {
+        New-Item -ItemType Directory -Path $destPath
     }
 
-    # Aplica a configuração de hardening do produto
-    $invokerPath = Join-Path -Path $BaseDirectory -ChildPath 'hardening-Invoker-OS.ps1'
-    & $invokerPath
+    # Permeia pelo json para captura da URI de cada arquivo do produto e realiza o download
+    foreach ($file in $repository.$product) {
+        $uri = [regex]::Replace($repoURI+$file.url,"_var_version",$version)
+        $fileName = $uri.Split("/")[-1]
+        $filePath = Join-Path -Path $destPath -ChildPath $fileName
+                       
+        Invoke-WebRequest $uri -OutFile $filePath
+    }
 }
 
-function Download-Hardening-Files {
+download_hardening_files -Product generic -Version stable
+
+$checkfolder = Test-Path "C:\totvs\hardening\log\"
+if ($checkfolder -eq $false ) {
+    try {
+       
+        New-Item -ItemType Directory -Force -Path "C:\totvs\hardening\log\" | Out-Null
+    }
+    catch {
+        Write-Warning "Não foi possível criar a pasta em C:\totvs\hardening\log\, utilizada para salvar logs. Abortando execução."
+        Exit
+    }
+}
+
+function Aplica-Hardening {
     param (
-        [string]$Url,
-        [string]$Path
+        [string]$Product,
+        [string]$Version,
+        [string]$BaseDirectory = 'c:\totvs\hardening'
     )
 
-    # Cria o diretório se ele não existir
-    $dir = Split-Path $Path
-    if (!(Test-Path -Path $dir)) {
-        New-Item -ItemType Directory -Path $dir | Out-Null
-    }
+    $configFile = "hardening-Config-OS-$Product-w2k16.json"
+    $configFilePath = Join-Path -Path $BaseDirectory -ChildPath $configFile
+    $invokerPath = Join-Path -Path $BaseDirectory -ChildPath 'hardening-Invoker-OS.ps1'
 
-    # Faz download do arquivo
-    $wc = New-Object System.Net.WebClient
-    $wc.DownloadFile($Url, $Path)
+    & $invokerPath -apply hardening -configfile $configFilePath
+}
+
+Aplica-Hardening -Product generic -Version stable
+
+
+#-------------------------------------------START SCRIPT----------------------------------------------------------
+
+#Cria a pasta para salvar os arquivos de log
+# RESULT_SECEDIT  tem o log do que foi aplicado via secedit
+# RESULT_REGISTRY tem o log do que foi aplicato via registro
+$checkfolder = Test-Path "C:\totvs\hardening\log\"
+if ($checkfolder -eq $false ) {
+    try {
+       
+        New-Item -ItemType Directory -Force -Path "C:\totvs\hardening\log\" | Out-Null
+    }
+    catch {
+        Write-Warning "Não foi possível criar a pasta em C:\totvs\hardening\log\, utilizada para salvar logs. Abortando execução."
+        Exit
+    }
+}
+
+#Cria a pasta para salvar os arquivos de Backup [rollback]
+#HARDENINGBACKUP é o arquivo com as configurações atuais do servidor (antes da aplicação do hardening). 
+$checkfolder = Test-Path "C:\totvs\hardening\backup"
+if ($checkfolder -eq $false ) {
+    try {
+        
+        New-Item -ItemType Directory -Force -Path "C:\totvs\hardening\backup\" | Out-Null
+    }
+    catch {
+        Write-Warning "Não foi possível criar a pasta em C:\totvs\hardening\backup\, utilizada para salvar logs e o arquivo de rollback. Abortando execução."
+        Exit
+    }
 }
 
 
-#Apply-Hardening -Product datasul -Version stable
+
+#Incia a chamada das funções
+
+Admin-check
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
