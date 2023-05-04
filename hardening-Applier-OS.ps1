@@ -12,6 +12,12 @@ EXEMPLO:hardening-Invoker-OS
 
 Clear-Host
 
+param(
+    [string]$Product,
+    [string]$Version
+)
+
+
 #Função que verifica a execução como Admin
 function Admin-check {
     $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
@@ -46,7 +52,8 @@ function download_hardening_files()
     $repoURI = "http://192.168.1.125:8080/Hardening-OS/"
     
     # Cria o dicionário de dados utilizando JSON com os arquivos de configuração dos produtos
-    $json = '
+    # Cria o dicionário de dados utilizando JSON com os arquivos de configuração dos produtos
+$json = '
         {
           "generic": [
             {
@@ -76,9 +83,18 @@ function download_hardening_files()
               "url": "datasul/_var_version/hardening-Complementary-Datasul-UnwantedSVCs.ps1"
             }
           ]
-
         }
     '
+
+# Encontra o produto no JSON
+if ($json -match '"'$Product'"':\s*\[(.*?)\]') {
+    $productFiles = $matches[1] -split '[\r\n]+' | Where-Object { $_.Trim() -ne '' } | ConvertFrom-Json
+} else {
+    Write-Error "Produto desconhecido: $Product"
+    Exit 1
+}
+
+    
     $repository = $json | ConvertFrom-Json
        
 
@@ -91,14 +107,15 @@ function download_hardening_files()
     }
 
     # Permeia pelo json para captura da URI de cada arquivo do produto e realiza o download
-    foreach ($file in $repository.$product) {
-        $uri = [regex]::Replace($repoURI+$file.url,"_var_version",$version)
-        $fileName = $uri.Split("/")[-1]
-        $filePath = Join-Path -Path $destPath -ChildPath $fileName
-                       
-        Invoke-WebRequest $uri -OutFile $filePath
-    }
+    foreach ($file in $productFiles) {
+    $url = $file.url.Replace("_var_version", $Version)
+    $filename = Split-Path -Leaf $url
+    $filepath = Join-Path $hardeningFilesDir $filename
+
+    Write-Host "Baixando arquivo $filename..."
+    Invoke-WebRequest -Uri $url -OutFile $filepath
 }
+
 
 download_hardening_files -Product generic -Version stable
 
