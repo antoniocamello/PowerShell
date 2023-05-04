@@ -29,6 +29,7 @@ if (!(Test-Path $localDirectory)) {
     New-Item -ItemType Directory -Path $localDirectory
 }
 
+
 #Função que Cria o dicionário de dados com os arquivos de configuração dos produtos
 function download_hardening_files()
  {
@@ -66,15 +67,16 @@ function download_hardening_files()
               "url": "generic/_var_version/hardening-Invoker-OS.ps1"
             },
             {
-              "url": "datasul/_var_version/hardening-Config-OS-datasul.json"
+              "url": "datasul/_var_version/hardening-Config-OS-Datasul-w2k16.json"
             },
             {
-              "url": "generic/_var_version/hardening-Complementary-datasul-AuditPol.ps1"
+              "url": "datasul/_var_version/hardening-Complementary-Datasul-AuditPol.ps1"
             },
             {
-              "url": "generic/_var_version/hardening-Complementary-datasul-UnwantedSVCs.ps1"
+              "url": "datasul/_var_version/hardening-Complementary-Datasul-UnwantedSVCs.ps1"
             }
           ]
+
         }
     '
     $repository = $json | ConvertFrom-Json
@@ -98,6 +100,35 @@ function download_hardening_files()
     }
 }
 
+download_hardening_files -Product generic -Version stable
+
+$checkfolder = Test-Path "C:\totvs\hardening\log\"
+if ($checkfolder -eq $false ) {
+    try {
+       
+        New-Item -ItemType Directory -Force -Path "C:\totvs\hardening\log\" | Out-Null
+    }
+    catch {
+        Write-Warning "Não foi possível criar a pasta em C:\totvs\hardening\log\, utilizada para salvar logs. Abortando execução."
+        Exit
+    }
+}
+
+function Aplica-Hardening {
+    param (
+        [string]$Product,
+        [string]$Version,
+        [string]$BaseDirectory = 'c:\totvs\hardening'
+    )
+
+    $configFile = "hardening-Config-OS-$Product-w2k16.json"
+    $configFilePath = Join-Path -Path $BaseDirectory -ChildPath $configFile
+    $invokerPath = Join-Path -Path $BaseDirectory -ChildPath 'hardening-Invoker-OS.ps1'
+
+    & $invokerPath -apply hardening -configfile $configFilePath
+}
+
+Aplica-Hardening -Product generic -Version stable
 
 
 #-------------------------------------------START SCRIPT----------------------------------------------------------
@@ -137,7 +168,7 @@ if ($checkfolder -eq $false ) {
 
 Admin-check
 
-download_hardening_files -Product "generic" -version "stable" 
+ 
 
 
 
