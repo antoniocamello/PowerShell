@@ -61,7 +61,7 @@ foreach($service in $services){
 				Stop-Service -Name $serviceProp.Name -Force
 			}
 		
-        #A opção "Remove-Service" existe apenas no PowerShell 6.0 ou posterior. Windows PowerShell 5.1 is already installed by default in all versions, starting with Win10 and W2k16.
+        #A opÃ§Ã£o "Remove-Service" existe apenas no PowerShell 6.0 ou posterior. Windows PowerShell 5.1 is already installed by default in all versions, starting with Win10 and W2k16.
 		#Remove-Service -Name $serviceName
 		#cmd /c "sc delete $serviceName"
         Set-Service -Name $serviceProp.Name -Status stopped -StartupType disable
