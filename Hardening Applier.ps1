@@ -1,199 +1,221 @@
 <# 
 NOME:
-    hardening-Applier-OS-Generic.ps1
+    hardening-Applier-OS.ps1
 DESCRIÇÃO:
-    Este script aplica as configurações de Hardening Especificadas pelo CIS no Sistama Operacional
-    Sem referencia a nenhum produto TOTVs.
-EXEMPLO:hardening-Invoker-OS
-    PS C:\totvs\hardening .\hardening-Applier-OS-Generic.ps1
+    Este script aplica as configurações de Hardening-OS (CIS Control, Windows Services desnecessários, AuditPol, etc);
+    
+EXEMPLO:
+    PS C:\totvs\hardening .\hardening-Applier-OS.ps1 -product generico -version stable 
+    Valores da variável product: genérico, datasul, legaldesk, sisjuri, protheus, rm, smartrm, Winthor, Consinco, etc;
+    Valores da variável version: stable ou latest
 
+VERSION:
+    1.0
 #>
+
+
+#-------------------------------------------GLOBAL VARIABLES SECTOR---------------------------------------------------------
+Param(
+  [Parameter(Mandatory = $true, Position = 0)]
+  [string] $Product,
+  [Parameter(Mandatory = $true, Position = 1)]
+  [string] $Version
+)
+
+"Product = $product"
+"Version = $Version"
+
+# Define o diretório local onde os arquivos serão baixados
+$HardeningDirectory = "C:\totvs\hardening"
+
+$configFile = "hardening-Config-OS-generic-w2k16.json"
+$diffFile = "hardening-Config-OS-$Product-w2k16.json"
+
+
+# Define a URL do repositório
+$repoURI = "http://repo-$($env:CloudEdgeEnv).cloudtotvs.com.br/windows/hardening-os/"
+
+# Cria o log de execução do Script "hardening-Invoker-OS.ps1"
+New-Folder "c:\totvs\hardening\log\"
+$logFilePath = "c:\totvs\hardening\log\hardeningApplier$(hostname)-$((Get-Date).ToString('dd-MM-yyyy')).txt"
+Start-Transcript -Path $logFilePath
+
+
+#-------------------------------------------END GLOBAL VARIABLES SECTOR---------------------------------------------------------
+
+
+
+
+#------------------------------------------- FUNCTIONS SECTOR---------------------------------------------------------
+
+#Função que verifica a execução como Admin
+function Get-Admin-check() {
+  $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
+  if ($currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator) -eq $false) {
+    Write-Warning "Scritp sendo executado com usuário não-admin. Abortando execução."
+    Exit
+        
+  }
+
+}
+
+
+#Função que Cria o dicionário de dados e faz o download dos arquivos de configuração dos produtos
+function Get-Download_hardening_files() {
+
+
+    
+  # Cria o dicionário de dados utilizando JSON com os arquivos de configuração dos produtos
+  $json = '
+        {
+          "generic": [
+            {
+              "url": "generic/_var_version/hardening-Invoker-OS.ps1"
+            },
+            {
+              "url": "generic/_var_version/hardening-Config-OS-generic-w2k16.json"
+            },
+            {
+              "url": "generic/_var_version/hardening-Complementary-generic-AuditPol.ps1"
+            },
+            {
+              "url": "generic/_var_version/hardening-Complementary-generic-UnwantedSVCs.ps1"
+            }
+          ],
+          "datasul": [
+            {
+              "url": "generic/_var_version/hardening-Config-OS-generic-w2k16.json"
+            },  
+            {
+              "url": "generic/_var_version/hardening-Invoker-OS.ps1"
+            },
+            {
+              "url": "datasul/_var_version/hardening-Config-OS-Datasul-w2k16.json"
+            },
+            {
+              "url": "generic/_var_version/hardening-Complementary-generic-AuditPol.ps1"
+            },
+            {
+              "url": "generic/_var_version/hardening-Complementary-generic-UnwantedSVCs.ps1"
+            }
+          ],
+          "legaldesk": [
+            {
+              "url": "generic/_var_version/hardening-Config-OS-generic-w2k19.json"
+            },  
+            {
+              "url": "generic/_var_version/hardening-Invoker-OS.ps1"
+            },
+            {
+              "url": "legaldesk/_var_version/hardening-Config-OS-legaldesk-w2k19.json"
+            },
+            {
+              "url": "generic/_var_version/hardening-Complementary-generic-AuditPol.ps1"
+            },
+            {
+              "url": "generic/_var_version/hardening-Complementary-generic-UnwantedSVCs.ps1"
+            },
+            {
+              "url": "legaldesk/_var_version/hardening-Complementary-legaldesk-IIS.ps1"
+            }
+          ]
+        }
+    '
+  $repository = $json | ConvertFrom-Json
+       
+
+    
+  # Cria o diretório de destino se ele não existir
+  if (!(Test-Path -Path $HardeningDirectory -PathType Container)) {
+    New-Item -ItemType Directory -Path $HardeningDirectory
+  }
+
+  # Permeia pelo json para captura da URI de cada arquivo do produto e realiza o download
+  foreach ($file in $repository.$product) {
+    $uri = [regex]::Replace($repoURI + $file.url, "_var_version", $version)
+    $fileName = $uri.Split("/")[-1]
+    $filePath = Join-Path -Path $HardeningDirectory -ChildPath $fileName
+                       
+    Invoke-WebRequest $uri -OutFile $filePath -UseBasicParsing
+  }
+}
+
+# Função para aplicar o hardening
+function Set-Aplica-Hardening {
+
+
+  $configFilePath = Join-Path -Path $HardeningDirectory -ChildPath $configFile
+  $diffFilePath = Join-Path -Path $HardeningDirectory -ChildPath $diffFile
+  $invokerPath = Join-Path -Path $HardeningDirectory -ChildPath 'hardening-Invoker-OS.ps1'
+
+  write-host $Product
+    
+  if ($Product -match "generic") {
+    & $invokerPath -apply hardening -configfile $configFilePath
+  }
+  else {
+    & $invokerPath -apply hardening -configfile $configFilePath -productfile $diffFilePath
+  }
+}
+
+
+
+# Função para Schedule Task - Hardening-Enforcing (Estado Desejado)
+# Admin Rights required
+function Set-Hardening-Enforcing() {
+
+  # Caminho do arquivo .ps1 e os parâmetros necessários
+  if ($product -match "generic") {
+    $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Bypass -File `"$HardeningDirectory\hardening-Invoker-OS.ps1`" -apply hardening -configfile `"$HardeningDirectory\hardening-Config-OS-generic-w2k16.json`""
+  }
+  else {
+    $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Bypass -File `"$HardeningDirectory\hardening-Invoker-OS.ps1`" -apply hardening -configfile `"$HardeningDirectory\hardening-Config-OS-generic-w2k16.json`" -productfile `"$HardeningDirectory\$diffFile`"" 
+  }
+  
+
+  # Define o gatilho para a tarefa agendada
+  $trigger = New-ScheduledTaskTrigger -Daily -At "05:00" -RandomDelay $(New-TimeSpan -Hours 16)
+
+  # Cria a tarefa agendada
+  Register-ScheduledTask -TaskName "Hardening-Enforcing" -Action $action -Trigger $trigger -User "NT AUTHORITY\SYSTEM" -Description "Created At: $(get-date)" -RunLevel Highest -Force
+  if ($? -eq $true) {
+    write-host "$(Get-Date) - Hardening-Enforcing criada com sucesso."
+    return $true
+  }
+  Write-Warning "Falha ao criar Hardening-Enforcing"
+  return false
+}
+
+#------------------------------------------END FUNCTIONS SECTOR---------------------------------------------------------
+
+
+#------------------------------------------- SCRIPT SECTOR---------------------------------------------------------
+
 
 Clear-Host
 
-#Função que verifica a execução como Admin
-function Admin-check {
-    $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
-    if ($currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator) -eq $false) {
-        Write-Warning "Scritp sendo executado com usuário não-admin. Abortando execução."
-        Exit
-        
-    }
+# chamada da função que verifica a execução como Admin
+Get-Admin-check
 
-}
+# Chamada da função para download dos arquivos de hardening, conforme cada produto
+Get-Download_hardening_files
 
-#Função para baixar os arquivos do Repositório e salvar no diretório c:\totvs\hardening
-param (
-    [Parameter(Mandatory=$true)]
-    [string]$produto
-)
+# Chamada da função para aplicar o hardening utilizando o script "hardening-Invoker-OS.ps1"
+Set-Aplica-Hardening
 
-function invoke-hardening {
-    param (
-        [Parameter(Mandatory=$true)]
-        [string]$produto
-    )
+# chamada da função para configuração do Estado Desejado do Hardening (Enforcing)
+Set-Hardening-Enforcing
 
-    # Diretório base para os arquivos de configuração
-    $base_directory = 'c:\totvs\hardening'
+# Reinicializa o sistema
+Write-Host "O Windows será REINICIADO AGUARDE..." -ForegroundColor Yellow
 
-    # URLs para download dos arquivos de configuração
-    $repo_totvs_edge_url = "192.168.1.125"
+# Cria e exporta o log de execução do Script "hardening-Invoker-OS.ps1"
+Stop-Transcript
 
-    $urls = @{
-        "generico" = @(
-            @{ "file1" = "$repo_totvs_edge_url/Hardening-OS/generic/stable/hardening-Invoker-OS-Generic.ps1" },
-            @{ "file2" = "$repo_totvs_edge_url/Hardening-OS/generic/stable/hardening-Config-OS-Generic-w2k16.json" },
-            @{ "file2" = "$repo_totvs_edge_url/Hardening-OS/generic/stable/hardening-Complementary-Generic-AuditPol.ps1" },
-            @{ "file2" = "$repo_totvs_edge_url/Hardening-OS/generic/stable/hardening-Complementary-Generic-UnwantedSVCs.ps1" }
-        ),
-        "datasul" = @(
-            @{ "file1" = "$repo_totvs_edge_url/Hardening-OS/generic/stable/hardening-Config-OS-Datasul-w2k16.json" },
-            @{ "file2" = "" },
-            @{ "file3" = "" }
-        )
-    }
-
-    if (-not $urls.ContainsKey($produto)) {
-        Write-Error "Produto inválido: $produto"
-        return
-    }
-
-    $url_list = $urls[$produto]
-
-    # Cria o diretório base se não existe
-    if (-not (Test-Path -Path $base_directory)) {
-        New-Item -ItemType Directory -Path $base_directory | Out-Null
-    }
-
-    # Download dos arquivos de configuração
-    foreach ($file in $url_list) {
-        $url = $file.url
-        $outfile = Join-Path $base_directory (Split-Path -Leaf $url)
-
-        Write-Host "Baixando arquivo $outfile..."
-
-        # Download do arquivo
-        Invoke-WebRequest -Uri $url -OutFile $outfile
-
-        Write-Host "Arquivo $outfile baixado com sucesso."
-    }
-
-    # Aplica as configurações
-    $config_file = Join-Path $base_directory "hardening-Config-OS-$produto-w2k16.json"
-    $invoker_file = Join-Path $base_directory "hardening-Invoker-OS-Generic.ps1"
-
-    if (-not (Test-Path -Path $config_file)) {
-        Write-Error "Arquivo de configuração não encontrado: $config_file"
-        return
-    }
-
-    if (-not (Test-Path -Path $invoker_file)) {
-        Write-Error "Arquivo de invocação não encontrado: $invoker_file"
-        return
-    }
-
-    Write-Host "Aplicando configurações do produto $produto..."
-
-    # Executa o script de invocação para aplicar as configurações
-    . $invoker_file -ConfigFile $config_file
-
-    Write-Host "Configurações do produto $produto aplicadas com sucesso."
-}
-
-invoke-hardening -produto $produto
-
-    #Função para executar o arquivo hardening-Invoker-OS.ps1
-function invoke-hardening {
-    param (
-        [string]$base_directory = 'c:\totvs\hardening',
-        [string]$configfile = 'hardening-Config-OS-Generic-w2k16.json',
-        [string]$productfile = 'hardening-Config-OS-datasul-w2k16.json'
-    )
-
-    $invoker_path = Join-Path -Path $base_directory -ChildPath 'hardening-Invoker-OS-Generic.ps1'
-    & $invoker_path -apply hardening -configfile (Join-Path -Path $base_directory -ChildPath $configfile) 
-
-}
-#invoke-hardening -configfile 'cis_hardening_windows_server_2016_default_v0.4.json' -productfile 'diff.json'
-
-
-#Função para Ativar as configurações de auditoria do Windows
-function run-auditpol {
-    param (
-        [string]$base_directory = 'c:\totvs\hardening'
-    )
-    
-    $script_path = Join-Path -Path $base_directory -ChildPath 'hardening-Complementary-generic-AuditPol'
-    & $script_path
-}
-
-#Função para Desabilitar os serviços desnecessários do Windows
-function run-unwantedservices {
-    param (
-        [string]$base_directory = 'c:\totvs\hardening'
-    )
-    
-    $script_path = Join-Path -Path $base_directory -ChildPath 'hardening-Complementary-generic-UnwantedSVCs.ps1'
-    & $script_path
-}
-
-
-#-------------------- START SCRIPT ----------------------------------------
- #Cria a pasta para salvar os arquivos de log
-# RESULT_SECEDIT  tem o log do que foi aplicado via secedit
-# RESULT_REGISTRY tem o log do que foi aplicato via registro
-$checkfolder = Test-Path "C:\totvs\hardening\log\"
-if ($checkfolder -eq $false ) {
-    try {
-       
-        New-Item -ItemType Directory -Force -Path "C:\totvs\hardening\log\" | Out-Null
-    }
-    catch {
-        Write-Warning "Não foi possível criar a pasta em C:\totvs\hardening\log\, utilizada para salvar logs. Abortando execução."
-        Exit
-    }
-}
-
-#Cria a pasta para salvar os arquivos de Backup [rollback]
-#HARDENINGBACKUP é o arquivo com as configurações atuais do servidor (antes da aplicação do hardening). 
-$checkfolder = Test-Path "C:\totvs\hardening\backup"
-if ($checkfolder -eq $false ) {
-    try {
-        
-        New-Item -ItemType Directory -Force -Path "C:\totvs\hardening\backup\" | Out-Null
-    }
-    catch {
-        Write-Warning "Não foi possível criar a pasta em C:\totvs\hardening\backup\, utilizada para salvar logs e o arquivo de rollback. Abortando execução."
-        Exit
-    }
-}
-
-#Executa a chamada das funções
-
-Admin-check
-
-Baixar-Arquivos -produto "generico"
-#Baixar-Arquivos -produto "datasul"
-
-invoke-hardening -configfile 'hardening-Config-OS-Generic-w2k16.json' -productfile 'hardening-Config-OS-datasul-w2k16.json'
-
-run-unwantedservices
-
-run-auditpol
-
-#Cria o agendamento do enforcement no task scheduler 
-$taskName = "Hardening-OS-Enforcing" 
-
-# Caminho do arquivo .ps1 e os parâmetros necessários
-$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Bypass -File `"C:\totvs\hardening\hardening-Invoker-OS-Generic.ps1`" -apply hardening -configfile `"c:\totvs\hardening\hardening-Config-OS-Generic-w2k16.json`"" 
-$trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).Date.AddDays(1) -RepetitionInterval (New-TimeSpan -Hours 1) -RepetitionDuration (New-TimeSpan -Days 1)
-
-# Cria a tarefa no task schedule do Windows
-Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -User "NT AUTHORITY\SYSTEM"
-
-#Após a aplicação do hardening é necessário fazer um boot na máquina.
-Restart-Computer -Force
+#Restart-Computer -Force
 
 
 
+#-------------------------------------------END SCRIPT SECTOR---------------------------------------------------------
+
+ 
